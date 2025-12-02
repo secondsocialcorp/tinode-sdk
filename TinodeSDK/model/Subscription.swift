@@ -95,6 +95,7 @@ public class Subscription<SP: Codable, SR: Codable>: Codable, SubscriptionProto 
     public var clear: Int? = 0
     public var getClear: Int { return clear ?? 0 }
     public var subcnt: Int? = 0
+    public var type: String?
     public var pub: SP?
     public var trusted: TrustedType?
     public var seen: LastSeen?
@@ -112,7 +113,7 @@ public class Subscription<SP: Codable, SR: Codable>: Codable, SubscriptionProto 
 
     private enum CodingKeys: String, CodingKey {
         case user, updated, deleted, touched, acs, read, recv,
-             priv = "private", online, topic, seq, clear, subcnt,
+             priv = "private", online, topic, seq, clear, subcnt, type,
              pub = "public", trusted, seen
     }
 
@@ -198,6 +199,10 @@ public class Subscription<SP: Codable, SR: Codable>: Codable, SubscriptionProto 
             } else {
                 changed = seen!.merge(seen: sub.seen) || changed
             }
+        }
+        if let t = sub.type, !t.isEmpty && type != t {
+            type = t
+            changed = true
         }
 
         return changed

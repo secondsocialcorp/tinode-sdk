@@ -26,6 +26,7 @@ public protocol TopicProto: AnyObject {
     var clear: Int? { get set }
     var subCnt: Int { get set }
     var payload: Payload? { get set }
+    var type: String? { get set }
     var tags: [String]? { get set }
     var isNew: Bool { get }
     var accessMode: Acs? { get set }
@@ -379,6 +380,10 @@ open class Topic<DP: Codable & Mergeable, DR: Codable & Mergeable, SP: Codable, 
     }
 
     public var pinnedRank: Int?
+    public var type: String? {
+        get { return description.type }
+        set { description.type = newValue }
+    }
 
     public var topicType: TopicType {
         return Tinode.topicTypeByName(name: self.name)
@@ -1099,8 +1104,8 @@ open class Topic<DP: Codable & Mergeable, DR: Codable & Mergeable, SP: Codable, 
         return setMeta(meta: MsgSetMeta<DP, DR>(desc: desc, sub: nil, tags: nil, cred: nil))
     }
 
-    public func setMeta(pub: DP?, priv: DR?) -> PromisedReply<ServerMessage> {
-        return setMeta(desc: MetaSetDesc<DP, DR>(pub: pub, priv: priv))
+    public func setMeta(pub: DP?, priv: DR?, type: String? = nil) -> PromisedReply<ServerMessage> {
+        return setMeta(desc: MetaSetDesc<DP, DR>(pub: pub, priv: priv, type: type))
     }
 
     public func updateDefacs(auth: String?, anon: String?) -> PromisedReply<ServerMessage> {

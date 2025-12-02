@@ -30,6 +30,8 @@ public class Description<DP: Codable & Mergeable, DR: Codable & Mergeable>: Desc
     var getClear: Int { return clear ?? 0 }
     // Merged from Subscription.
     var subcnt: Int = 0
+    var type: String?
+
 
     var pub: DP?
     var priv: DR?
@@ -39,7 +41,7 @@ public class Description<DP: Codable & Mergeable, DR: Codable & Mergeable>: Desc
 
     private enum CodingKeys: String, CodingKey {
         case created, updated, touched,
-             defacs, acs, seq, read, recv, clear, subcnt,
+             defacs, acs, seq, read, recv, clear, subcnt, type,
              pub = "public", priv = "private", trusted, seen
     }
 
@@ -116,6 +118,10 @@ public class Description<DP: Codable & Mergeable, DR: Codable & Mergeable>: Desc
         debugPrint("Merging desc subcnt \(desc.subcnt) into \(subcnt)")
         if desc.subcnt > 0  && subcnt != desc.subcnt {
             subcnt = desc.subcnt
+            changed = true
+        }
+        if desc.type != nil && type != desc.type {
+            type = desc.type
             changed = true
         }
         if let spub = desc.pub {
@@ -196,6 +202,10 @@ public class Description<DP: Codable & Mergeable, DR: Codable & Mergeable>: Desc
             subcnt = cnt
             changed = true
         }
+        if let t = sub.type, !t.isEmpty && type != t {
+            type = t
+            changed = true
+        }
         return changed
     }
     func merge(desc: MetaSetDesc<DP, DR>) -> Bool {
@@ -216,6 +226,10 @@ public class Description<DP: Codable & Mergeable, DR: Codable & Mergeable>: Desc
         }
         if let trusted = desc.trusted {
             changed = mergeTrusted(with: trusted) || changed
+        }
+        if let type = desc.type {
+            self.type = type
+            changed = true
         }
         return changed
     }

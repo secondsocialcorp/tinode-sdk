@@ -332,20 +332,23 @@ public class MetaSetDesc<P: Codable, R: Codable>: Codable {
     var pub: P?
     var priv: R?
     var trusted: TrustedType?
+    var type: String?
+
 
     // Not serialized
     public var attachments: [String]?
 
     private enum CodingKeys: String, CodingKey {
-        case defacs, pub = "public", priv = "private", trusted
+        case defacs, pub = "public", priv = "private", trusted, type
     }
     public init(da: Defacs) {
         self.defacs = da
     }
-    public init(pub: P?, priv: R?) {
+    public init(pub: P?, priv: R?, type: String? = nil) {
         self.pub = pub
         self.priv = priv
         self.trusted = nil
+        self.type = type
     }
     public init(auth: String, anon: String) {
         self.defacs = Defacs(auth: auth, anon: anon)
