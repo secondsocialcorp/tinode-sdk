@@ -96,6 +96,7 @@ public class Subscription<SP: Codable, SR: Codable>: Codable, SubscriptionProto 
     public var getClear: Int { return clear ?? 0 }
     public var subcnt: Int? = 0
     public var type: String?
+    public var lastmsg: MsgServerData?
     public var pub: SP?
     public var trusted: TrustedType?
     public var seen: LastSeen?
@@ -114,7 +115,7 @@ public class Subscription<SP: Codable, SR: Codable>: Codable, SubscriptionProto 
     private enum CodingKeys: String, CodingKey {
         case user, updated, deleted, touched, acs, read, recv,
              priv = "private", online, topic, seq, clear, subcnt, type,
-             pub = "public", trusted, seen
+             pub = "public", trusted, seen, lastmsg
     }
 
     func updateAccessMode(ac: AccessChange?) {
@@ -202,6 +203,10 @@ public class Subscription<SP: Codable, SR: Codable>: Codable, SubscriptionProto 
         }
         if let t = sub.type, !t.isEmpty && type != t {
             type = t
+            changed = true
+        }
+        if sub.lastmsg != nil {
+            lastmsg = sub.lastmsg
             changed = true
         }
 

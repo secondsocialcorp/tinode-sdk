@@ -44,6 +44,7 @@ public protocol TopicProto: AnyObject {
     var isDangerous: Bool { get }
     var unread: Int { get }
     var latestMessage: Message? { get set }
+    var lastmsg: MsgServerData? { get set }
     var pinnedRank: Int? { get set }
 
     func serializePub() -> String?
@@ -55,6 +56,9 @@ public protocol TopicProto: AnyObject {
     func deserializePriv(from data: String?) -> Bool
     @discardableResult
     func deserializeTrusted(from data: String?) -> Bool
+    func serializeLastMsg() -> String?
+    @discardableResult
+    func deserializeLastMsg(from data: String?) -> Bool
     func topicLeft(unsub: Bool?, code: Int?, reason: String?)
 
     func updateAccessMode(ac: AccessChange?) -> Bool
@@ -379,6 +383,11 @@ open class Topic<DP: Codable & Mergeable, DR: Codable & Mergeable, SP: Codable, 
         }
     }
 
+    public var lastmsg: MsgServerData? {
+        get { return description.lastmsg }
+        set { description.lastmsg = newValue }
+    }
+
     public var pinnedRank: Int?
     public var type: String? {
         get { return description.type }
@@ -567,6 +576,17 @@ open class Topic<DP: Codable & Mergeable, DR: Codable & Mergeable, SP: Codable, 
     public func deserializeTrusted(from data: String?) -> Bool {
         if let t: TrustedType = Tinode.deserializeObject(from: data) {
             description.trusted = t
+            return true
+        }
+        return false
+    }
+    public func serializeLastMsg() -> String? {
+        guard let lm = lastmsg else { return nil }
+        return Tinode.serializeObject(lm)
+    }
+    public func deserializeLastMsg(from data: String?) -> Bool {
+        if let lm: MsgServerData = Tinode.deserializeObject(from: data) {
+            lastmsg = lm
             return true
         }
         return false

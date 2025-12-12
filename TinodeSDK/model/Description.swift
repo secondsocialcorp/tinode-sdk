@@ -31,6 +31,7 @@ public class Description<DP: Codable & Mergeable, DR: Codable & Mergeable>: Desc
     // Merged from Subscription.
     var subcnt: Int = 0
     var type: String?
+    var lastmsg: MsgServerData?
 
 
     var pub: DP?
@@ -42,7 +43,7 @@ public class Description<DP: Codable & Mergeable, DR: Codable & Mergeable>: Desc
     private enum CodingKeys: String, CodingKey {
         case created, updated, touched,
              defacs, acs, seq, read, recv, clear, subcnt, type,
-             pub = "public", priv = "private", trusted, seen
+             pub = "public", priv = "private", trusted, seen, lastmsg
     }
 
     private func mergePub(with another: DP) -> Bool {
@@ -122,6 +123,10 @@ public class Description<DP: Codable & Mergeable, DR: Codable & Mergeable>: Desc
         }
         if desc.type != nil && type != desc.type {
             type = desc.type
+            changed = true
+        }
+        if desc.lastmsg != nil {
+            lastmsg = desc.lastmsg
             changed = true
         }
         if let spub = desc.pub {
@@ -204,6 +209,10 @@ public class Description<DP: Codable & Mergeable, DR: Codable & Mergeable>: Desc
         }
         if let t = sub.type, !t.isEmpty && type != t {
             type = t
+            changed = true
+        }
+        if sub.lastmsg != nil {
+            lastmsg = sub.lastmsg
             changed = true
         }
         return changed

@@ -37,6 +37,7 @@ public class TopicDb {
     public let status: SQLite.Expression<Int?>
     public let topic: SQLite.Expression<String?>
     public let type: SQLite.Expression<Int?>
+    public let customTypeChat: SQLite.Expression<String?>
     public let visible: SQLite.Expression<Int64?>
     public let created: SQLite.Expression<Date?>
     public let updated: SQLite.Expression<Date?>
@@ -58,6 +59,7 @@ public class TopicDb {
     public let priv: SQLite.Expression<String?>
     public let trusted: SQLite.Expression<String?>
     public let pinned: SQLite.Expression<Int?>
+    public let lastmsg: SQLite.Expression<String?>
 
     private let baseDb: BaseDb!
 
@@ -70,6 +72,7 @@ public class TopicDb {
         self.status = Expression<Int?>("status")
         self.topic = Expression<String?>("topic")
         self.type = Expression<Int?>("type")
+        self.customTypeChat = Expression<String?>("custom_type_chat")
         self.visible = Expression<Int64?>("visible")
         self.created = Expression<Date?>("created")
         self.updated = Expression<Date?>("updated")
@@ -91,6 +94,7 @@ public class TopicDb {
         self.priv = Expression<String?>("priv")
         self.trusted = Expression<String?>("trusted")
         self.pinned = Expression<Int?>("pinned")
+        self.lastmsg = Expression<String?>("lastmsg")
     }
     func destroyTable() {
         try! self.db.run(self.table.dropIndex(accountId, topic, ifExists: true))
@@ -106,6 +110,7 @@ public class TopicDb {
             t.column(status)
             t.column(topic)
             t.column(type)
+            t.column(customTypeChat)
             t.column(visible)
             t.column(created)
             t.column(updated)
@@ -130,8 +135,12 @@ public class TopicDb {
             t.column(priv)
             t.column(trusted)
             t.column(pinned)
+            t.column(lastmsg)
         })
         try! db.run(self.table.createIndex(accountId, topic, unique: true, ifNotExists: true))
+        // Migration: Ensure typeStr column exists for existing installations
+        try? self.db.run(self.table.addColumn(customTypeChat))
+        try? self.db.run(self.table.addColumn(lastmsg))
     }
 
     // Deletes all records from `topics` table.
@@ -163,6 +172,7 @@ public class TopicDb {
         topic.clear = row[self.clear]
         topic.subCnt = row[self.subcnt] ?? 0
         topic.maxDel = row[self.maxDel] ?? 0
+        topic.type = row[self.customTypeChat]
         (topic as? MeTopicProto)?.deserializeCreds(from: row[self.creds])
         topic.tags = row[self.tags]?.components(separatedBy: ",")
 
@@ -172,9 +182,9 @@ public class TopicDb {
         topic.deserializePriv(from: row[self.priv])
         topic.deserializeTrusted(from: row[self.trusted])
         topic.pinnedRank = row[self.pinned] ?? 0
+        topic.deserializeLastMsg(from: row[self.lastmsg])
         topic.payload = st
     }
-
     public func getId(topic: String?) -> Int64 {
         guard let topic = topic else {
             return -1
@@ -242,6 +252,7 @@ public class TopicDb {
                     self.status <- status.rawValue,
                     self.topic <- topic.name,
                     type <- tpv,
+                    customTypeChat <- topic.type,
                     visible <- TopicType.grp == tp || TopicType.p2p == tp ? 1 : 0,
                     created <- lastUsed,
                     updated <- topic.updated,
@@ -265,7 +276,8 @@ public class TopicDb {
                     pub <- topic.serializePub(),
                     priv <- topic.serializePriv(),
                     trusted <- topic.serializeTrusted(),
-                    pinned <- topic.pinnedRank
+                    pinned <- topic.pinnedRank,
+                    lastmsg <- topic.serializeLastMsg()
                 ))
             if rowid > 0 {
                 let st = StoredTopic()
@@ -303,6 +315,7 @@ public class TopicDb {
         setters.append(self.seq <- topic.seq)
         setters.append(self.clear <- topic.clear)
         setters.append(self.subcnt <- topic.subCnt)
+        setters.append(self.customTypeChat <- topic.type)
         setters.append(self.accessMode <- topic.accessMode?.serialize())
         setters.append(self.defacs <- topic.defacs?.serialize())
         setters.append(self.tags <- topic.tags?.joined(separator: ","))
@@ -313,6 +326,7 @@ public class TopicDb {
         setters.append(self.priv <- topic.serializePriv())
         setters.append(self.trusted <- topic.serializeTrusted())
         setters.append(self.pinned <- topic.pinnedRank)
+        setters.append(self.lastmsg <- topic.serializeLastMsg())
         if let touched = topic.touched {
             setters.append(self.lastUsed <- touched)
         }
