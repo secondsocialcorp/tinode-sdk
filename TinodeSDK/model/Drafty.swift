@@ -81,6 +81,9 @@ open class Drafty: Codable, CustomStringConvertible, Equatable {
         case txt = "txt"
         case fmt = "fmt"
         case ent = "ent"
+        case m = "m"
+        case t = "t"
+        case a = "a"
     }
 
     // Formatting weights. Used to break ties between formatting spans
@@ -91,6 +94,10 @@ open class Drafty: Codable, CustomStringConvertible, Equatable {
     public var txt: String
     public var fmt: [Style]?
     public var ent: [Entity]?
+    // Admin message fields
+    public var m: JSONValue?
+    public var t: String?
+    public var a: [String: JSONValue]?
 
     public var hasRefEntity: Bool {
         guard let ent = ent, ent.count > 0 else { return false }
@@ -116,11 +123,45 @@ open class Drafty: Codable, CustomStringConvertible, Equatable {
         } else {
             // Non-optional decoding as a Drafty object.
             let container = try decoder.container(keyedBy: CodingKeys.self)
+            
+            // Decode new fields
+            do {
+                m = try container.decodeIfPresent(JSONValue.self, forKey: .m)
+            } catch {
+                print("Drafty: failed to decode 'm': \(error)")
+            }
+            t = try? container.decode(String.self, forKey: .t)
+            a = try? container.decode([String: JSONValue].self, forKey: .a)
+            
             // Txt is missing for attachments. 
             do {
                 txt = try container.decode(String.self, forKey: .txt)
             } catch DecodingError.keyNotFound {
-                txt = ""
+                // Use 'm' as fallback if txt is missing
+                if let mVal = m {
+                    var rawText = ""
+                    if case .string(let s) = mVal {
+                        rawText = s
+                    } else if let data = try? Tinode.jsonEncoder.encode(mVal), let s = String(data: data, encoding: .utf8) {
+                        rawText = s
+                    }
+                    
+                    // Replace placeholders with values from 'a'
+                    if let args = a {
+                        for (key, val) in args {
+                            var replacement = ""
+                            if case .string(let s) = val {
+                                replacement = s
+                            } else if let data = try? Tinode.jsonEncoder.encode(val), let s = String(data: data, encoding: .utf8) {
+                                replacement = s
+                            }
+                            rawText = rawText.replacingOccurrences(of: "{\(key)}", with: replacement)
+                        }
+                    }
+                    txt = rawText
+                } else {
+                    txt = ""
+                }
             }
             fmt = try? container.decode([Style].self, forKey: .fmt)
             ent = try? container.decode([Entity].self, forKey: .ent)
@@ -131,19 +172,22 @@ open class Drafty: Codable, CustomStringConvertible, Equatable {
     /// First checks if Drafty can be represented as plain text and if so encodes
     /// it as a primitive string. Otherwise encodes into a JSON object.
     public func encode(to encoder: Encoder) throws {
-        if isPlain {
+        if isPlain && m == nil && t == nil && a == nil {
             // If trafty contains plain text, encode it as a primitive string.
             var container = encoder.singleValueContainer()
             try container.encode(txt)
         } else {
             var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encode(txt, forKey: CodingKeys.txt)
+            try container.encode(txt, forKey: .txt)
             // fmt cannot be nil.
-            try container.encode(fmt, forKey: CodingKeys.fmt)
+            try container.encode(fmt, forKey: .fmt)
             // Encode entities only if they are present.
-            if ent != nil {
-                try container.encode(ent, forKey: CodingKeys.ent)
+            if let ent = ent {
+                try container.encode(ent, forKey: .ent)
             }
+            if let m = m { try container.encode(m, forKey: .m) }
+            if let t = t { try container.encode(t, forKey: .t) }
+            if let a = a { try container.encode(a, forKey: .a) }
         }
     }
 
@@ -824,6 +868,10 @@ open class Drafty: Codable, CustomStringConvertible, Equatable {
                 fmt!.append(style)
             }
         }
+        
+        if m == nil { m = that.m }
+        if t == nil { t = that.t }
+        if a == nil { a = that.a }
 
         return self
     }
@@ -876,7 +924,7 @@ open class Drafty: Codable, CustomStringConvertible, Equatable {
     /// Check if the instance contains no markup and consequently can be represented by
     /// plain String without loss of information.
     public var isPlain: Bool {
-        return ent == nil && fmt == nil
+        return ent == nil && fmt == nil && m == nil && t == nil && a == nil
     }
 
     /// Collection of methods to convert Drafty object into a tree of Span's and traverse the tree top-down and bottom-up.
@@ -1271,6 +1319,9 @@ open class Drafty: Codable, CustomStringConvertible, Equatable {
         var keymap = [Int: Int]()
         var result = Drafty()
         tree.appendTo(document: &result, withKeymap: &keymap)
+        result.m = self.m
+        result.t = self.t
+        result.a = self.a
         return result
     }
 
@@ -1317,6 +1368,9 @@ open class Drafty: Codable, CustomStringConvertible, Equatable {
         var keymap = [Int: Int]()
         var result = Drafty()
         tree.appendTo(document: &result, withKeymap: &keymap)
+        result.m = self.m
+        result.t = self.t
+        result.a = self.a
         return result
     }
 
@@ -1349,6 +1403,9 @@ open class Drafty: Codable, CustomStringConvertible, Equatable {
         var keymap = [Int: Int]()
         var result = Drafty()
         tree.appendTo(document: &result, withKeymap: &keymap)
+        result.m = self.m
+        result.t = self.t
+        result.a = self.a
         return result
     }
 
@@ -1398,6 +1455,9 @@ open class Drafty: Codable, CustomStringConvertible, Equatable {
         var keymap = [Int: Int]()
         var result = Drafty()
         tree.appendTo(document: &result, withKeymap: &keymap)
+        result.m = self.m
+        result.t = self.t
+        result.a = self.a
         return result
     }
 
@@ -1411,6 +1471,9 @@ open class Drafty: Codable, CustomStringConvertible, Equatable {
         var keymap = [Int: Int]()
         var result = Drafty()
         tree.appendTo(document: &result, withKeymap: &keymap)
+        result.m = self.m
+        result.t = self.t
+        result.a = self.a
         return result
     }
 
