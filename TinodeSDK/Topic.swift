@@ -1403,8 +1403,10 @@ open class Topic<DP: Codable & Mergeable, DR: Codable & Mergeable, SP: Codable, 
             headers!["mime"] = .string(Drafty.kMimeType)
             attachments = content.entReferences
         } else {
-            // Plain text content should not have "mime" header. Clear it.
-            headers?.removeValue(forKey: "mime")
+            // Plain text content should not have "mime" header, unless it's a custom type.
+            if headers?["mime"]?.asString() != "text/c" {
+                headers?.removeValue(forKey: "mime")
+            }
         }
 
         return tinode!.publish(topic: name, head: headers, content: content, attachments: attachments).then(
