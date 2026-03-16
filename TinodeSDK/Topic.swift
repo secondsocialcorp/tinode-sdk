@@ -1400,7 +1400,7 @@ open class Topic<DP: Codable & Mergeable, DR: Codable & Mergeable, SP: Codable, 
                 headers = [:]
             }
             // Set "x-drafty" mime header (except video call messages).
-            if headers?["mime"] == nil { headers!["mime"] = .string(Drafty.kMimeType) }
+            if headers?["mime"] == nil && (headers?["forwarded"] == nil) { headers!["mime"] = .string(Drafty.kMimeType) }
             attachments = content.entReferences
         } else {
             // Plain text content should not have "mime" header, unless it's a custom type.
@@ -1434,7 +1434,7 @@ open class Topic<DP: Codable & Mergeable, DR: Codable & Mergeable, SP: Codable, 
                 head!.merge(extra) { (_, new) in new }
             }
             if !content.isPlain {
-                if head?["mime"] == nil { head!["mime"] = .string(Drafty.kMimeType) }
+                if head?["mime"] == nil && (head?["forwarded"] == nil) { head!["mime"] = .string(Drafty.kMimeType) }
             }
             if head!["webrtc"] != nil {
                 content.updateVideoEnt(withParams: head, isIncoming: false)
