@@ -1591,11 +1591,26 @@ open class Topic<DP: Codable & Mergeable, DR: Codable & Mergeable, SP: Codable, 
     }
 
     public func setSeqAndFetch(newSeq: Int?) {
-        guard let newSeq = newSeq, newSeq > description.getSeq else { return }
-        let limit = newSeq - description.getSeq
-        self.setSeq(seq: newSeq)
-        if !self.attached {
-            self.subscribe(set: nil, get: self.metaGetBuilder().withLaterData(limit: limit).build()).thenApply({ _ in
+        guard let newSeq = newSeq, newSeq > 0 else { return }
+
+        let previousSeq = description.getSeq
+        let cachedHi = cachedMessageRange?.hi ?? 0
+
+        // Keep the topic's sequence monotonic, but compute catch-up based on
+        // cached messages to avoid missing gaps when seq advanced elsewhere.
+        if newSeq > previousSeq {
+            self.setSeq(seq: newSeq)
+        }
+
+        // If local storage is behind, fetch exactly the missing tail.
+        let fetchLimit = newSeq - cachedHi
+        guard fetchLimit > 0 else { return }
+
+        let query = self.metaGetBuilder().withLaterData(limit: fetchLimit).build()
+        if self.attached {
+            self.getMeta(query: query)
+        } else {
+            self.subscribe(set: nil, get: query).thenApply({ _ in
                 self.leave()
                 return nil
             })
