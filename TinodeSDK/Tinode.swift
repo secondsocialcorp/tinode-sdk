@@ -585,7 +585,7 @@ public class Tinode {
             } else if let what = ctrl.getStringParam(for: "what"), let topicName = ctrl.topic, let topic = getTopic(topicName: topicName) {
                 switch what {
                 case "data":
-                    topic.allMessagesReceived(count: ctrl.getIntParam(for: "count"))
+                    topic.allMessagesReceived(code: ctrl.code, count: ctrl.getIntParam(for: "count"))
                 case "sub":
                     topic.allSubsReceived()
                 default:
