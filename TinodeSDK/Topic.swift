@@ -69,11 +69,18 @@ public protocol TopicProto: AnyObject {
     func missingMessageRanges(startFrom: Int, pageSize: Int, newer: Bool) -> [MsgRange]?
 
     func allMessagesReceived(count: Int?)
+    func allMessagesReceived(code: Int, count: Int?)
     func allSubsReceived()
     func routeMeta(meta: MsgServerMeta)
     func routeData(data: MsgServerData)
     func routePres(pres: MsgServerPres)
     func routeInfo(info: MsgServerInfo)
+}
+
+public extension TopicProto {
+    func allMessagesReceived(code: Int, count: Int?) {
+        allMessagesReceived(count: count)
+    }
 }
 
 public enum TopicType: Int {
@@ -120,6 +127,11 @@ open class Topic<DP: Codable & Mergeable, DR: Codable & Mergeable, SP: Codable, 
         open func onData(data: MsgServerData?) {}
         // All requested data messages received.
         open func onAllMessagesReceived(count: Int) {}
+        // Completion status for a data history request (e.g. 204 no content, 208 delivered).
+        // The default preserves compatibility with listeners which only implement the count callback.
+        open func onAllMessagesReceived(code: Int, count: Int?) {
+            onAllMessagesReceived(count: count ?? 0)
+        }
 
         // {info} message received.
         open func onInfo(info: MsgServerInfo) {}
@@ -703,6 +715,10 @@ open class Topic<DP: Codable & Mergeable, DR: Codable & Mergeable, SP: Codable, 
 
     public func allMessagesReceived(count: Int?) {
         listener?.onAllMessagesReceived(count: count ?? 0)
+    }
+
+    public func allMessagesReceived(code: Int, count: Int?) {
+        listener?.onAllMessagesReceived(code: code, count: count)
     }
 
     public func allSubsReceived() {
